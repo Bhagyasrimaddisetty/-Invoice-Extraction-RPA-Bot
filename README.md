@@ -77,7 +77,7 @@ Invoice-Extraction-RPA-Bot
 
 ## Output Screenshot
 
-![Output](screenshots/Screenshot%202026-07-07%20182056.png)
+![Output](screenshots/Screenshot%202026-07-07%20182056.png) 
 
 ## How to Run in UiPath Studio
 
