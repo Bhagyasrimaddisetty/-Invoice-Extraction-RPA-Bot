@@ -27,6 +27,14 @@ This project automates invoice processing using UiPath. The bot reads invoices f
 
 [Invoice Processing Automation Bot Demo](https://drive.google.com/file/d/1wpUZFII6JAg-BklBPdYQJdp9kdPQxaLE/view?usp=sharing)
 
+## Workflow Screenshot
+
+![Workflow](screenshots/Screenshot%202026-07-07%20180911.png)
+
+## Output Screenshot
+
+![Output](screenshots/Screenshot%202026-07-07%20182056.png)
+
 
 ## Workflow Architecture
 
@@ -70,14 +78,6 @@ Invoice-Extraction-RPA-Bot
 ├── process_invoices_reference.py       Python reference implementation (see note below)
 └── README.md
 ```
-
-## Workflow Screenshot
-
-![Workflow](screenshots/Screenshot%202026-07-07%20180911.png)
-
-## Output Screenshot
-
-![Output](screenshots/Screenshot%202026-07-07%20182056.png) 
 
 ## How to Run in UiPath Studio
 
