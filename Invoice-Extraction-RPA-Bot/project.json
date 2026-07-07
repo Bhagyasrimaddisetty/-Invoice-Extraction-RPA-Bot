@@ -1,0 +1,55 @@
+{
+  "name": "Invoice-Extraction-RPA-Bot",
+  "description": "RPA bot that reads invoice PDFs from a folder, extracts and validates invoice data, writes results to Excel, and generates a processing summary.",
+  "main": "Main.xaml",
+  "dependencies": {
+    "UiPath.Excel.Activities": "[2.20.0]",
+    "UiPath.PDF.Activities": "[4.2.0]",
+    "UiPath.System.Activities": "[24.10.2]",
+    "UiPath.Mail.Activities": "[1.18.5]"
+  },
+  "webServices": [],
+  "schemaVersion": "4.0",
+  "studioVersion": "24.10.2.0",
+  "projectId": "8f2b6d3e-1a4c-4e9a-9c7a-invoice-rpa-bot",
+  "libraryOptions": {
+    "includeOriginalXaml": false,
+    "privateWorkflows": []
+  },
+  "designOptions": {
+    "projectProfile": "Development",
+    "outputType": "Process",
+    "fileInfoCollection": [
+      {
+        "FileName": "Main.xaml",
+        "FileType": "Process",
+        "IsMainFile": true,
+        "IsTestFile": false
+      }
+    ]
+  },
+  "runtimeOptions": {
+    "requiresUserInteraction": false,
+    "isAttended": false,
+    "supportsPersistence": false,
+    "netFrameworkLegacy": false,
+    "autoDispose": false,
+    "isPausable": true,
+    "excludedLoggedData": [
+      "OutArgument",
+      "InOutArgument"
+    ],
+    "executionType": "Workflow",
+    "readyForPiP": false,
+    "startsInPiP": false,
+    "workflowSerialization": "DataContractOrXaml"
+  },
+  "entryPoints": [
+    {
+      "filePath": "Main.xaml",
+      "uniqueId": "b1c2d3e4-f5a6-4b7c-8d9e-0f1a2b3c4d5e",
+      "input": [],
+      "output": []
+    }
+  ]
+}

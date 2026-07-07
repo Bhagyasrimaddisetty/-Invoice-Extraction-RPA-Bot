@@ -1,0 +1,323 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Activity mc:Ignorable="sap sap2010" x:Class="Main"
+ xmlns="http://schemas.microsoft.com/netfx/2009/xaml/activities"
+ xmlns:mv="clr-namespace:Microsoft.VisualBasic;assembly=System"
+ xmlns:s="clr-namespace:System;assembly=mscorlib"
+ xmlns:sco="clr-namespace:System.Collections.ObjectModel;assembly=mscorlib"
+ xmlns:sap="http://schemas.microsoft.com/netfx/2009/xaml/activities/presentation"
+ xmlns:sap2010="http://schemas.microsoft.com/netfx/2010/xaml/activities/presentation"
+ xmlns:ui="http://schemas.uipath.com/workflow/activities"
+ xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+ xmlns:mca="clr-namespace:System.Activities.Statements;assembly=System.Activities">
+  <x:Members>
+    <x:Property Name="in_InvoiceFolder" Type="InArgument(x:String)" />
+    <x:Property Name="in_OutputFile" Type="InArgument(x:String)" />
+  </x:Members>
+  <sap:VirtualizedContainerService.HintSize>500,1400</sap:VirtualizedContainerService.HintSize>
+
+  <!--
+    ==========================================================================
+    Invoice Processing Automation Bot - Main.xaml
+    ==========================================================================
+    Matches the architecture in README.md:
+
+      Start -> Read Invoice Folder -> For Each Invoice -> Extract Invoice Data
+            -> Validate Fields -> (Valid? Store Data : Store Error)
+            -> Write Excel Report -> Generate Summary -> End
+
+    Variables used throughout this workflow:
+      invoiceFiles      IEnumerable(String)  - list of PDFs in sample_invoices/
+      currentFile       String                - path of file in current loop iteration
+      invoiceText       String                - full extracted PDF text
+      invoiceNumber     String
+      invoiceDate       String
+      vendorName        String
+      amountValue       String
+      statusValue       String                - "Valid" / "Missing X"
+      reportTable       DataTable             - accumulates all processed rows
+      totalCount        Int32
+      validCount        Int32
+      errorCount        Int32
+    ==========================================================================
+  -->
+
+  <Sequence DisplayName="Main Sequence" sap2010:WorkflowViewState.IdRef="Sequence_Main">
+    <Sequence.Variables>
+      <Variable x:TypeArguments="s:String[]" Name="invoiceFiles" />
+      <Variable x:TypeArguments="s:String" Name="currentFile" />
+      <Variable x:TypeArguments="s:String" Name="invoiceText" />
+      <Variable x:TypeArguments="s:String" Name="invoiceNumber" />
+      <Variable x:TypeArguments="s:String" Name="invoiceDate" />
+      <Variable x:TypeArguments="s:String" Name="vendorName" />
+      <Variable x:TypeArguments="s:String" Name="amountValue" />
+      <Variable x:TypeArguments="s:String" Name="statusValue" />
+      <Variable x:TypeArguments="System.Data.DataTable" Name="reportTable" />
+      <Variable x:TypeArguments="x:Int32" Default="0" Name="totalCount" />
+      <Variable x:TypeArguments="x:Int32" Default="0" Name="validCount" />
+      <Variable x:TypeArguments="x:Int32" Default="0" Name="errorCount" />
+    </Sequence.Variables>
+
+    <!-- STEP 0: Initialize -->
+    <ui:LogMessage DisplayName="Log - Process Started" Level="Info" Message="[&quot;Invoice Automation Process Started&quot;]" />
+
+    <Assign DisplayName="Assign - Invoice Folder Path" sap2010:WorkflowViewState.IdRef="Assign_Folder">
+      <Assign.To>
+        <OutArgument x:TypeArguments="s:String">[in_InvoiceFolder]</OutArgument>
+      </Assign.To>
+      <Assign.Value>
+        <InArgument x:TypeArguments="s:String">["sample_invoices"]</InArgument>
+      </Assign.Value>
+    </Assign>
+
+    <Assign DisplayName="Assign - Build Report DataTable" sap2010:WorkflowViewState.IdRef="Assign_BuildTable">
+      <Assign.To>
+        <OutArgument x:TypeArguments="System.Data.DataTable">[reportTable]</OutArgument>
+      </Assign.To>
+      <Assign.Value>
+        <InArgument x:TypeArguments="System.Data.DataTable">[New System.Data.DataTable("InvoiceReport")]</InArgument>
+      </Assign.Value>
+    </Assign>
+
+    <!--
+      NOTE: In UiPath Studio, add these DataTable columns via the
+      "Build Data Table" wizard on reportTable before this point,
+      or use Add DataColumn activities:
+        Invoice Number (String), Date (String), Vendor (String),
+        Amount (String), Status (String)
+    -->
+
+    <!-- STEP 1: Read Invoice Folder -->
+    <ui:LogMessage DisplayName="Log - Reading Invoice Folder" Level="Info" Message="[&quot;Reading Invoice Folder: &quot; + in_InvoiceFolder]" />
+
+    <Assign DisplayName="Assign - Get Files In Folder" sap2010:WorkflowViewState.IdRef="Assign_GetFiles">
+      <Assign.To>
+        <OutArgument x:TypeArguments="s:String[]">[invoiceFiles]</OutArgument>
+      </Assign.To>
+      <Assign.Value>
+        <InArgument x:TypeArguments="s:String[]">[System.IO.Directory.GetFiles(in_InvoiceFolder, "*.pdf")]</InArgument>
+      </Assign.Value>
+    </Assign>
+
+    <!-- STEP 2-5: For Each Invoice -->
+    <mca:ForEach x:TypeArguments="s:String" DisplayName="For Each Invoice File" Values="[invoiceFiles]">
+      <ActivityAction x:TypeArguments="s:String">
+        <ActivityAction.Argument>
+          <DelegateInArgument x:TypeArguments="s:String" Name="currentFile" />
+        </ActivityAction.Argument>
+
+        <TryCatch DisplayName="Try Catch - Process Single Invoice">
+          <TryCatch.Try>
+            <Sequence DisplayName="Process Invoice Sequence">
+
+              <ui:LogMessage DisplayName="Log - Reading Invoice" Level="Info"
+                Message="[&quot;Reading Invoice: &quot; + System.IO.Path.GetFileName(currentFile)]" />
+
+              <!-- STEP 2: Read PDF Text -->
+              <ui:ReadPDFText DisplayName="Read PDF Text"
+                FileName="[currentFile]"
+                Text="[invoiceText]" />
+
+              <!-- STEP 3: Extract Required Fields (Regex) -->
+              <ui:LogMessage DisplayName="Log - Extracting Fields" Level="Info" Message="[&quot;Extracting Fields&quot;]" />
+
+              <Assign DisplayName="Assign - Invoice Number">
+                <Assign.To>
+                  <OutArgument x:TypeArguments="s:String">[invoiceNumber]</OutArgument>
+                </Assign.To>
+                <Assign.Value>
+                  <InArgument x:TypeArguments="s:String">[System.Text.RegularExpressions.Regex.Match(invoiceText, "Invoice Number\s*:\s*(.*)").Groups(1).Value.Trim()]</InArgument>
+                </Assign.Value>
+              </Assign>
+
+              <Assign DisplayName="Assign - Invoice Date">
+                <Assign.To>
+                  <OutArgument x:TypeArguments="s:String">[invoiceDate]</OutArgument>
+                </Assign.To>
+                <Assign.Value>
+                  <InArgument x:TypeArguments="s:String">[System.Text.RegularExpressions.Regex.Match(invoiceText, "Invoice Date\s*:\s*(.*)").Groups(1).Value.Trim()]</InArgument>
+                </Assign.Value>
+              </Assign>
+
+              <Assign DisplayName="Assign - Vendor Name">
+                <Assign.To>
+                  <OutArgument x:TypeArguments="s:String">[vendorName]</OutArgument>
+                </Assign.To>
+                <Assign.Value>
+                  <InArgument x:TypeArguments="s:String">[System.Text.RegularExpressions.Regex.Match(invoiceText, "Vendor\s*:\s*(.*)").Groups(1).Value.Trim()]</InArgument>
+                </Assign.Value>
+              </Assign>
+
+              <Assign DisplayName="Assign - Amount">
+                <Assign.To>
+                  <OutArgument x:TypeArguments="s:String">[amountValue]</OutArgument>
+                </Assign.To>
+                <Assign.Value>
+                  <InArgument x:TypeArguments="s:String">[System.Text.RegularExpressions.Regex.Match(invoiceText, "Amount\s*:\s*(?:Rs\.?|₹)?\s*([0-9,\.]+)").Groups(1).Value.Trim()]</InArgument>
+                </Assign.Value>
+              </Assign>
+
+              <!-- STEP 4: Validation -->
+              <If Condition="[String.IsNullOrWhiteSpace(invoiceNumber)]" DisplayName="If - Missing Invoice Number">
+                <If.Then>
+                  <Assign DisplayName="Assign - Status Missing Number">
+                    <Assign.To>
+                      <OutArgument x:TypeArguments="s:String">[statusValue]</OutArgument>
+                    </Assign.To>
+                    <Assign.Value>
+                      <InArgument x:TypeArguments="s:String">["Missing Invoice Number"]</InArgument>
+                    </Assign.Value>
+                  </Assign>
+                </If.Then>
+                <If.Else>
+                  <If Condition="[String.IsNullOrWhiteSpace(invoiceDate)]" DisplayName="If - Missing Date">
+                    <If.Then>
+                      <Assign DisplayName="Assign - Status Missing Date">
+                        <Assign.To>
+                          <OutArgument x:TypeArguments="s:String">[statusValue]</OutArgument>
+                        </Assign.To>
+                        <Assign.Value>
+                          <InArgument x:TypeArguments="s:String">["Missing Date"]</InArgument>
+                        </Assign.Value>
+                      </Assign>
+                    </If.Then>
+                    <If.Else>
+                      <If Condition="[String.IsNullOrWhiteSpace(vendorName)]" DisplayName="If - Missing Vendor">
+                        <If.Then>
+                          <Assign DisplayName="Assign - Status Missing Vendor">
+                            <Assign.To>
+                              <OutArgument x:TypeArguments="s:String">[statusValue]</OutArgument>
+                            </Assign.To>
+                            <Assign.Value>
+                              <InArgument x:TypeArguments="s:String">["Missing Vendor"]</InArgument>
+                            </Assign.Value>
+                          </Assign>
+                        </If.Then>
+                        <If.Else>
+                          <If Condition="[String.IsNullOrWhiteSpace(amountValue)]" DisplayName="If - Missing Amount">
+                            <If.Then>
+                              <Assign DisplayName="Assign - Status Missing Amount">
+                                <Assign.To>
+                                  <OutArgument x:TypeArguments="s:String">[statusValue]</OutArgument>
+                                </Assign.To>
+                                <Assign.Value>
+                                  <InArgument x:TypeArguments="s:String">["Missing Amount"]</InArgument>
+                                </Assign.Value>
+                              </Assign>
+                            </If.Then>
+                            <If.Else>
+                              <Assign DisplayName="Assign - Status Valid">
+                                <Assign.To>
+                                  <OutArgument x:TypeArguments="s:String">[statusValue]</OutArgument>
+                                </Assign.To>
+                                <Assign.Value>
+                                  <InArgument x:TypeArguments="s:String">["Valid"]</InArgument>
+                                </Assign.Value>
+                              </Assign>
+                            </If.Else>
+                          </If>
+                        </If.Else>
+                      </If>
+                    </If.Else>
+                  </If>
+                </If.Else>
+              </If>
+
+              <ui:LogMessage DisplayName="Log - Validation Result" Level="Info"
+                Message="[&quot;Validation Result: &quot; + statusValue]" />
+
+              <!-- STEP 5: Store Data / Store Error (both go into reportTable, status column differentiates) -->
+              <ui:AddDataRow DisplayName="Add Row To Report Table"
+                DataTable="[reportTable]"
+                ArrayRow="[{invoiceNumber, invoiceDate, vendorName, amountValue, statusValue}]" />
+
+              <Assign DisplayName="Assign - Increment Total Count">
+                <Assign.To>
+                  <OutArgument x:TypeArguments="x:Int32">[totalCount]</OutArgument>
+                </Assign.To>
+                <Assign.Value>
+                  <InArgument x:TypeArguments="x:Int32">[totalCount + 1]</InArgument>
+                </Assign.Value>
+              </Assign>
+
+              <If Condition="[statusValue = &quot;Valid&quot;]" DisplayName="If - Count Valid Or Error">
+                <If.Then>
+                  <Assign DisplayName="Assign - Increment Valid Count">
+                    <Assign.To>
+                      <OutArgument x:TypeArguments="x:Int32">[validCount]</OutArgument>
+                    </Assign.To>
+                    <Assign.Value>
+                      <InArgument x:TypeArguments="x:Int32">[validCount + 1]</InArgument>
+                    </Assign.Value>
+                  </Assign>
+                </If.Then>
+                <If.Else>
+                  <Assign DisplayName="Assign - Increment Error Count">
+                    <Assign.To>
+                      <OutArgument x:TypeArguments="x:Int32">[errorCount]</OutArgument>
+                    </Assign.To>
+                    <Assign.Value>
+                      <InArgument x:TypeArguments="x:Int32">[errorCount + 1]</InArgument>
+                    </Assign.Value>
+                  </Assign>
+                </If.Else>
+              </If>
+
+            </Sequence>
+          </TryCatch.Try>
+          <TryCatch.Catches>
+            <Catch x:TypeArguments="s:Exception">
+              <ActivityAction x:TypeArguments="s:Exception">
+                <ActivityAction.Argument>
+                  <DelegateInArgument x:TypeArguments="s:Exception" Name="ex" />
+                </ActivityAction.Argument>
+                <ui:LogMessage DisplayName="Log - Invoice Failed, Continuing" Level="Error"
+                  Message="[&quot;Failed to process &quot; + currentFile + &quot;: &quot; + ex.Message]" />
+              </ActivityAction>
+            </Catch>
+          </TryCatch.Catches>
+        </TryCatch>
+
+      </ActivityAction>
+    </mca:ForEach>
+
+    <!-- STEP 6: Write Excel -->
+    <ui:LogMessage DisplayName="Log - Writing Excel" Level="Info" Message="[&quot;Writing Excel Report&quot;]" />
+
+    <Assign DisplayName="Assign - Output File Path" sap2010:WorkflowViewState.IdRef="Assign_OutputFile">
+      <Assign.To>
+        <OutArgument x:TypeArguments="s:String">[in_OutputFile]</OutArgument>
+      </Assign.To>
+      <Assign.Value>
+        <InArgument x:TypeArguments="s:String">["output\Invoice_Report.xlsx"]</InArgument>
+      </Assign.Value>
+    </Assign>
+
+    <ui:WriteRangeWorkbook DisplayName="Write Range - Invoice Report"
+      WorkbookPath="[in_OutputFile]"
+      SheetName="Invoice Report"
+      StartingCell="A1"
+      AddHeaders="True"
+      DataTable="[reportTable]" />
+
+    <!-- STEP 7: Generate Summary -->
+    <ui:LogMessage DisplayName="Log - Generating Summary" Level="Info" Message="[&quot;Generating Summary&quot;]" />
+
+    <ui:LogMessage DisplayName="Log - Automation Summary" Level="Info"
+      Message="[&quot;Automation Summary&quot; + Environment.NewLine + &quot;-------------------&quot; + Environment.NewLine + &quot;Total Invoices : &quot; + totalCount.ToString() + Environment.NewLine + &quot;Processed : &quot; + totalCount.ToString() + Environment.NewLine + &quot;Valid : &quot; + validCount.ToString() + Environment.NewLine + &quot;Errors : &quot; + errorCount.ToString()]" />
+
+    <!--
+      STEP 8 (OPTIONAL): Send Outlook Mail Message
+      Uncomment and configure in UiPath Studio if email notification is required.
+
+      <ui:SendOutlookMailMessage DisplayName="Send Outlook Mail Message"
+        Account="[yourOutlookAccount]"
+        To="manager@company.com"
+        Subject="Invoice Automation Report"
+        Body="[&quot;Invoice processing completed successfully.&quot; + Environment.NewLine + &quot;Total Invoices : &quot; + totalCount.ToString() + Environment.NewLine + &quot;Valid : &quot; + validCount.ToString() + Environment.NewLine + &quot;Errors : &quot; + errorCount.ToString()]"
+        Attachments="[{in_OutputFile}]" />
+    -->
+
+    <ui:LogMessage DisplayName="Log - Process Completed" Level="Info" Message="[&quot;Process Completed&quot;]" />
+
+  </Sequence>
+</Activity>
