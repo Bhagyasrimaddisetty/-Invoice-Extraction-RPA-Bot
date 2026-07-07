@@ -27,14 +27,13 @@ This project automates invoice processing using UiPath. The bot reads invoices f
 
 [Invoice Processing Automation Bot Demo](https://drive.google.com/file/d/1wpUZFII6JAg-BklBPdYQJdp9kdPQxaLE/view?usp=sharing)
 
-## Workflow Screenshot
+<h2>Workflow Screenshot</h2>
 
-![Workflow](screenshots/Screenshot%202026-07-07%20180911.png)
+<img src="Screenshot%202026-07-07%20180911.png" width="900">
 
-## Output Screenshot
+<h2>Output Screenshot</h2>
 
-![Output](screenshots/Screenshot%202026-07-07%20182056.png)
-
+<img src="Screenshot%202026-07-07%20182056.png" width="900">
 
 ## Workflow Architecture
 
