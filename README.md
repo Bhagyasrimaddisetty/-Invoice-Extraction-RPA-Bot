@@ -71,6 +71,14 @@ Invoice-Extraction-RPA-Bot
 └── README.md
 ```
 
+## Workflow Screenshot
+
+![Workflow](screenshots/Screenshot%202026-07-07%20180911.png)
+
+## Output Screenshot
+
+![Output](screenshots/Screenshot%202026-07-07%20182056.png)
+
 ## How to Run in UiPath Studio
 
 1. Install **UiPath Studio Community Edition** (Windows).
@@ -118,14 +126,6 @@ This matches `output/Invoice_Report.xlsx`, included in this project, so you can 
 | INV1008.pdf | INV-1008 | Valid |
 | INV1009.pdf | INV1009  | **Missing Amount** |
 | INV1010.pdf | INV-1010 | Valid |
-
-## Workflow Screenshot
-
-![UiPath Workflow](screenshots/Screenshot%202026-07-07%20180911.png)
-
-## Output Screenshot
-
-![Invoice Report](screenshots/Screenshot%202026-07-07%20182056.png)
 
 ## Optional: Email Notification
 
